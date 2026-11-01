@@ -20,6 +20,10 @@ const ICON = {
     shop: '<svg viewBox="0 0 24 24"><path d="M7 7V6.5a5 5 0 0 1 10 0V7h3l-1 15H5L4 7zm2 0h6v-.5a3 3 0 0 0-6 0z"/></svg>',
     sight: '<svg viewBox="0 0 24 24"><path d="m12 2.5 2.9 6.1 6.6.8-4.9 4.6 1.3 6.5L12 17.3l-5.9 3.2 1.3-6.5-4.9-4.6 6.6-.8z"/></svg>',
     pin: '<svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>',
+    locate: '<svg viewBox="0 0 24 24"><path d="M20 4 4 10.5l7 2.5 2.5 7z"/></svg>',
+    walk: '<svg viewBox="0 0 24 24"><path d="M13.5 5.5a2 2 0 1 0 0-4 2 2 0 0 0 0 4zM9.8 8.9 7 23h2.1l1.8-8 2.1 2v6h2v-7.5l-2.1-2 .6-3A7.3 7.3 0 0 0 19 13v-2c-1.9 0-3.5-1-4.3-2.4l-1-1.6c-.4-.6-1-1-1.7-1-.3 0-.5.1-.8.1L6 8.3V13h2V9.6z"/></svg>',
+    car: '<svg viewBox="0 0 24 24"><path d="M18.9 6c-.2-.6-.8-1-1.4-1h-11c-.7 0-1.2.4-1.4 1L3 12v8c0 .6.4 1 1 1h1c.6 0 1-.4 1-1v-1h12v1c0 .6.4 1 1 1h1c.6 0 1-.4 1-1v-8zM6.5 16a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm11 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zM5 11l1.5-4.5h11L19 11z"/></svg>',
+    bike: '<svg viewBox="0 0 24 24"><path d="M19 7c0-1.1-.9-2-2-2h-3v2h3v2.65L13.52 14H10V9H6c-2.21 0-4 1.79-4 4v3h2c0 1.66 1.34 3 3 3s3-1.34 3-3h4.48L19 10.35zM7 17c-.55 0-1-.45-1-1h2c0 .55-.45 1-1 1zM5 6h5v2H5zm14 7c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3zm0 4c-.55 0-1-.45-1-1s.45-1 1-1 1 .45 1 1-.45 1-1 1z"/></svg>',
 };
 const CATS = {
     food: { label: 'Food', color: '#FF9500', icon: ICON.food },
@@ -156,7 +160,7 @@ function showTrip(val) {
     dayIndex = Math.min(dayIndex, trip.days.length - 1);
     renderChips();
     renderDay();
-    drawDay(true);
+    drawDay(!comparing);
 }
 
 function start() {
@@ -319,7 +323,9 @@ async function loadMapNow() {
         };
         definePinLayer();
         layer = new PinLayer();
-        drawDay(true);
+        drawDay(!comparing);
+        drawMe();
+        if (comparing) drawCompare(true);
     } catch (e) {
         toast('Couldn’t load the map. Check your connection.');
     }
@@ -453,6 +459,15 @@ function arc(a, b) { // gentle curve for flights
 }
 
 function line(path, opts) {
+    if (comparing) { // the day's itinerary fades into the background while comparing
+        if (opts.strokeOpacity) opts.strokeOpacity *= 0.3;
+        if (opts.icons) opts.icons = opts.icons.map(i => ({
+            ...i, icon: {
+                ...i.icon,
+                fillOpacity: (i.icon.fillOpacity || 0) * 0.3, strokeOpacity: (i.icon.strokeOpacity || 0) * 0.3
+            }
+        }));
+    }
     const l = new google.maps.Polyline({ path, map, clickable: false, geodesic: false, ...opts });
     drawn.push(l);
     return l;
@@ -648,33 +663,37 @@ function hideTemp() {
     if (tempPin) { tempPin.overlay.setMap(null); tempPin = null; }
 }
 
-// ---------- Search ----------
-let session = null, searchSeq = 0, searchTimer = 0, found = [];
+// ---------- Search (also used to choose From and To in Compare) ----------
+let session = null, searchSeq = 0, searchTimer = 0, found = [], searchMode = null;
 const searchOpen = () => $('search').classList.contains('open');
 
-searchBar.addEventListener('click', () => {
+function openSearch(mode = null) {
     if (cardOpen()) hideCard();
+    searchMode = mode;
+    $('q').placeholder = mode ? (mode.end === 'from' ? 'Choose start' : 'Choose destination') : 'Search Vietnam';
     $('search').classList.add('open');
     $('q').value = '';
-    $('results').innerHTML = '';
     $('q').focus();
     session = crypto.randomUUID();
+    showResults('', null);
     syncHistory();
-});
+}
+searchBar.addEventListener('click', () => openSearch());
 $('qCancel').addEventListener('click', () => closeSearch());
 function closeSearch() {
     $('search').classList.remove('open');
     $('q').blur();
     clearTimeout(searchTimer);
+    searchSeq++;
+    searchMode = null;
     syncHistory();
 }
 
 $('q').addEventListener('input', () => {
     clearTimeout(searchTimer);
     const q = $('q').value.trim();
-    if (q.length < 2) { $('results').innerHTML = ''; return; }
     showResults(q, null);
-    searchTimer = setTimeout(() => runSearch(q), 300);
+    if (q.length >= 2) searchTimer = setTimeout(() => runSearch(q), 300);
 });
 $('q').addEventListener('keydown', e => { if (e.key === 'Enter') { clearTimeout(searchTimer); runSearch($('q').value.trim()); } });
 
@@ -692,26 +711,44 @@ async function runSearch(q) {
 
 function showResults(q, places, err) {
     const ql = q.toLowerCase();
-    const saved = Object.entries(pins).filter(([, p]) => p.name.toLowerCase().includes(ql)).slice(0, 5);
-    const row = (i, icon, color, name, sub) =>
-        '<li class="row tap" data-i="' + i + '"><span class="badge" style="background:' + color + '">' + icon + '</span>' +
+    found = [];
+    const add = item => found.push(item) - 1;
+    const row = (item, icon, color, name, sub) =>
+        '<li class="row tap" data-i="' + add(item) + '"><span class="badge" style="background:' + color + '">' + icon + '</span>' +
         '<div class="txt"><div class="name">' + esc(name) + '</div>' + (sub ? '<div class="meta">' + esc(sub) + '</div>' : '') + '</div></li>';
-    found = saved.map(([id, p]) => ({ saved: id, p })).concat((places || []).map(p => ({ place: p })));
     let html = '';
-    if (saved.length) html += '<p class="section">On the map</p><ul class="list">' + saved.map(([id, p], i) => {
-        const c = CATS[p.cat] || CATS.sight;
-        return row(i, c.icon, c.color, p.name, c.label + ' · ' + p.byName);
-    }).join('') + '</ul>';
-    if (places && places.length) html += '<p class="section">Places</p><ul class="list">' +
-        places.map((p, i) => row(saved.length + i, ICON.pin, '#8E8E93', p.name, p.address)).join('') + '</ul>';
+    const section = (title, rows) => {
+        if (rows.length) html += (title ? '<p class="section">' + esc(title) + '</p>' : '<div style="height:8px"></div>') + '<ul class="list">' + rows.join('') + '</ul>';
+    };
+    if (searchMode) { // choosing a From or To: offer My Location and the day's stops first
+        if (!ql || 'my location'.includes(ql)) section('', [row({ me: true }, ICON.locate, BLUE, 'My Location', '')]);
+        const seen = new Set(), stops = trip ? trip.days[dayIndex].stops.filter(s => {
+            if (!located(s) || (ql && !s.name.toLowerCase().includes(ql))) return false;
+            const k = s.name + s.lat + s.lng;
+            if (seen.has(k)) return false;
+            seen.add(k); return true;
+        }) : [];
+        section('Day ' + (dayIndex + 1), stops.map(s => row({ stop: s }, s.kind === 'hotel' ? ICON.bed : ICON.pin,
+            s.kind === 'hotel' ? '#AF52DE' : BLUE, s.name, stopTime(s))));
+    }
+    if (ql) {
+        const saved = Object.entries(pins).filter(([, p]) => p.name.toLowerCase().includes(ql)).slice(0, 5);
+        section('On the map', saved.map(([id, p]) => {
+            const c = CATS[p.cat] || CATS.sight;
+            return row({ saved: id }, c.icon, c.color, p.name, c.label + ' · ' + p.byName);
+        }));
+    }
+    if (places && places.length) section('Places', places.map(p => row({ place: p }, ICON.pin, '#8E8E93', p.name, p.address)));
     if (err) html += '<p class="foot">' + esc(err) + '</p>';
-    else if (places && !places.length && !saved.length) html += '<p class="foot">No places found.</p>';
+    else if (ql.length >= 2 && places && !found.length) html += '<p class="foot">No places found.</p>';
     $('results').innerHTML = html;
     $('results').querySelectorAll('[data-i]').forEach(r => r.addEventListener('click', () => pick(found[+r.dataset.i])));
 }
 
 async function pick(item) {
+    const mode = searchMode;
     closeSearch();
+    if (mode) { setEndpoint(mode, item); return; }
     if (item.saved) { openPin(item.saved); return; }
     const place = item.place;
     const already = Object.entries(pins).find(([, p]) => p.placeId === place.id);
@@ -759,12 +796,276 @@ document.querySelectorAll('[data-city]').forEach(b => b.addEventListener('click'
     fitTo([{ lat: s, lng: w }, { lat: n, lng: e }]);
 }));
 
+// ---------- My location ----------
+let me = null, meWatch = null, meWanted = false, meDot = null, meHalo = null, meWaiters = [], centreOnFix = false;
+
+function watchMe() {
+    if (!navigator.geolocation) { toast('Location isn’t available on this device.'); return false; }
+    meWanted = true;
+    if (meWatch !== null) return true;
+    meWatch = navigator.geolocation.watchPosition(p => {
+        me = { lat: p.coords.latitude, lng: p.coords.longitude, acc: p.coords.accuracy };
+        drawMe();
+        meWaiters.splice(0).forEach(f => f(me));
+        if (centreOnFix) { centreOnFix = false; frame(ll(me), 15); }
+    }, err => {
+        stopWatch();
+        meWanted = false;
+        $('locateBtn').classList.remove('on');
+        meWaiters.splice(0).forEach(f => f(null));
+        toast(err.code === 1 ? 'Location is blocked. Allow it for this site in your browser settings.' : 'Couldn’t find your location.');
+    }, { enableHighAccuracy: true, maximumAge: 15000, timeout: 30000 });
+    return true;
+}
+function stopWatch() {
+    if (meWatch !== null) { navigator.geolocation.clearWatch(meWatch); meWatch = null; }
+}
+function getMe() {
+    if (me) return Promise.resolve(me);
+    if (!watchMe()) return Promise.resolve(null);
+    return new Promise(resolve => { meWaiters.push(resolve); setTimeout(() => resolve(me), 20000); });
+}
+// Stop using GPS while the app is in the background, to save battery
+document.addEventListener('visibilitychange', () => { if (document.hidden) stopWatch(); else if (meWanted) watchMe(); });
+
+$('locateBtn').addEventListener('click', () => {
+    $('locateBtn').classList.add('on');
+    if (me) frame(ll(me), 15);
+    else { centreOnFix = true; watchMe(); }
+});
+
+function drawMe() {
+    if (!map || !me) return;
+    if (!meDot) {
+        const el = document.createElement('div');
+        el.className = 'me';
+        meDot = new Pin(ll(me), el);
+        meHalo = new google.maps.Circle({ map, center: ll(me), radius: me.acc, fillColor: BLUE, fillOpacity: .1, strokeOpacity: 0, clickable: false });
+    } else {
+        meDot.pos = ll(me);
+        meDot.draw();
+        meHalo.setCenter(ll(me));
+        meHalo.setRadius(me.acc);
+    }
+}
+
+// ---------- Compare ----------
+const ROUTE_COLORS = ['#FF9500', '#34C759', '#AF52DE', '#FF2D55', '#5AC8FA', '#A2845E'];
+const MODES = { walk: { icon: ICON.walk, label: 'Walk' }, car: { icon: ICON.car, label: 'Car' }, bike: { icon: ICON.bike, label: 'Motorbike' } };
+const FRESH = 15 * 60e3; // results are reused for 15 minutes
+let comparing = false, cmp = saved('compare') || [], cmpDrawn = [];
+cmp.forEach(r => { r.loading = false; r.res = Object.fromEntries(Object.entries(r.res || {}).filter(([, v]) => v && !v.loading)); });
+const keepCompare = () => keep('compare', cmp);
+
+function fmtDur(s) {
+    const m = Math.max(1, Math.round(s / 60));
+    return m < 60 ? m + ' min' : Math.floor(m / 60) + ' h' + (m % 60 ? ' ' + (m % 60) + ' min' : '');
+}
+function fmtDist(m) { return m < 1000 ? Math.round(m / 10) * 10 + ' m' : (m / 1000).toFixed(m < 10000 ? 1 : 0) + ' km'; }
+function metres(a, b) { // straight-line distance
+    const r = Math.PI / 180, x = (b.lng - a.lng) * r * Math.cos((a.lat + b.lat) * r / 2), y = (b.lat - a.lat) * r;
+    return Math.sqrt(x * x + y * y) * 6371e3;
+}
+
+function enterCompare() {
+    if (cardOpen()) hideCard();
+    comparing = true;
+    document.body.classList.add('comparing');
+    $('dayHead').hidden = true; chipsEl.hidden = true; $('cmpHead').hidden = false;
+    $('dayView').hidden = true; $('compareView').hidden = false;
+    measure();
+    if (!wide()) springTo('half');
+    drawDay(false);
+    if (!cmp.length) addRoute();
+    else { renderCompare(); cmp.forEach(r => compute(r)); drawCompare(true); }
+    syncHistory();
+}
+
+function exitCompare() {
+    comparing = false;
+    document.body.classList.remove('comparing');
+    $('dayHead').hidden = false; chipsEl.hidden = false; $('cmpHead').hidden = true;
+    $('dayView').hidden = false; $('compareView').hidden = true;
+    cmpDrawn.forEach(o => o.setMap(null)); cmpDrawn = [];
+    measure();
+    setY(snaps[state]);
+    drawDay(true);
+    syncHistory();
+}
+$('compareBtn').addEventListener('click', () => comparing ? exitCompare() : enterCompare());
+$('compareDone').addEventListener('click', exitCompare);
+$('compareRefresh').addEventListener('click', () => cmp.forEach(r => compute(r, true)));
+
+function hotelOfDay() {
+    const h = trip && trip.days[dayIndex].stops.find(s => s.kind === 'hotel' && located(s));
+    return h ? { name: h.name, lat: h.lat, lng: h.lng } : null;
+}
+
+// From starts as the last start you used, so five restaurants from the hotel means choosing the hotel once.
+function addRoute() {
+    const from = saved('lastFrom') || (me ? { me: true, name: 'My Location' } : hotelOfDay());
+    const r = { id: Date.now().toString(36), from, to: null, sel: 'car', res: {} };
+    cmp.push(r);
+    keepCompare();
+    renderCompare();
+    openSearch({ id: r.id, end: 'to' });
+}
+
+async function endpointFrom(item) {
+    if (item.me) return { me: true, name: 'My Location' };
+    if (item.stop) return { name: item.stop.name, lat: item.stop.lat, lng: item.stop.lng };
+    if (item.saved) { const p = pins[item.saved]; return p ? { name: p.name, lat: p.lat, lng: p.lng, placeId: p.placeId } : null; }
+    if (item.place) {
+        try {
+            const d = await api('/place', { id: item.place.id, session });
+            session = crypto.randomUUID();
+            return typeof d.lat === 'number' ? { name: item.place.name, lat: d.lat, lng: d.lng, placeId: item.place.id } : null;
+        } catch (e) {
+            toast(e.message === 'limit' ? 'Search is paused for today.' : 'Couldn’t open that place.');
+        }
+    }
+    return null;
+}
+
+async function setEndpoint(mode, item) {
+    const r = cmp.find(x => x.id === mode.id);
+    if (!r) return;
+    const ep = await endpointFrom(item);
+    if (!ep) return;
+    r[mode.end] = ep;
+    r.res = {}; r.at = 0; r.userSel = false;
+    if (mode.end === 'from') keep('lastFrom', ep);
+    keepCompare();
+    renderCompare();
+    compute(r);
+}
+
+async function coords(ep) {
+    if (!ep) return null;
+    if (!ep.me) return { lat: ep.lat, lng: ep.lng };
+    const m = await getMe();
+    if (!m) { toast('Turn on location to use My Location.'); return null; }
+    return ll(m);
+}
+const epPoint = ep => ep && (ep.me ? (me ? ll(me) : null) : { lat: ep.lat, lng: ep.lng });
+
+async function routeMode(r, mode, a, b) {
+    try {
+        const d = await api('/route', { mode, from: a, to: b, traffic: mode !== 'walk' });
+        r.res[mode] = d.none ? { none: true } : d;
+    } catch (e) {
+        r.res[mode] = { error: e.message === 'limit' ? 'limit' : 'error' };
+    }
+}
+
+// Walk and car come straight away; motorbike only on tap, because it has a small free allowance.
+async function compute(r, force = false) {
+    if (!r.from || !r.to) return;
+    if (!force && r.at && Date.now() - r.at < FRESH && r.res.car) { renderCompare(); drawCompare(false); return; }
+    const a = await coords(r.from), b = await coords(r.to);
+    if (!a || !b) return;
+    r.res = {}; r.loading = true;
+    renderCompare();
+    const jobs = [routeMode(r, 'car', a, b)];
+    if (metres(a, b) <= 15000) jobs.push(routeMode(r, 'walk', a, b)); else r.res.walk = { none: true };
+    await Promise.all(jobs);
+    r.loading = false; r.at = Date.now();
+    if (!r.userSel || !(r.res[r.sel] && r.res[r.sel].line)) {
+        r.sel = r.res.walk && r.res.walk.seconds && r.res.walk.seconds <= 1200 ? 'walk' : 'car';
+    }
+    keepCompare();
+    renderCompare();
+    drawCompare(true);
+}
+
+async function chooseMode(r, m) {
+    const res = r.res[m];
+    if (res && res.line) { r.sel = m; r.userSel = true; keepCompare(); renderCompare(); drawCompare(false); return; }
+    if (r.loading || (res && (res.loading || res.none || res.error === 'limit'))) return;
+    const a = await coords(r.from), b = await coords(r.to);
+    if (!a || !b) return;
+    r.res[m] = { loading: true };
+    renderCompare();
+    await routeMode(r, m, a, b);
+    if (r.res[m] && r.res[m].line) { r.sel = m; r.userSel = true; }
+    keepCompare();
+    renderCompare();
+    drawCompare(false);
+}
+
+function modeChip(r, m) {
+    const res = r.res[m];
+    let txt;
+    if ((r.loading && m !== 'bike') || (res && res.loading)) txt = '…';
+    else if (!res) txt = m === 'bike' ? 'Show' : '…';
+    else if (res.error === 'limit') txt = 'Paused';
+    else if (res.error) txt = 'Retry';
+    else if (res.none) txt = '—';
+    else txt = fmtDur(res.seconds) + '<small>' + fmtDist(res.meters) + '</small>';
+    return '<button class="mode' + (r.sel === m && res && res.line ? ' on' : '') + '" data-act="mode" data-m="' + m + '" aria-label="' + MODES[m].label + '">' +
+        MODES[m].icon + '<span>' + txt + '</span></button>';
+}
+
+function renderCompare() {
+    if (!comparing) return;
+    $('compareView').innerHTML = cmp.map((r, i) => {
+        const col = ROUTE_COLORS[i % ROUTE_COLORS.length];
+        return '<ul class="list cmp" data-id="' + r.id + '">' +
+            '<li class="row tap" data-act="from"><span class="dot" style="background:' + col + '"></span>' +
+            '<div class="txt"><div class="meta">From</div><div class="name' + (r.from ? '' : ' muted') + '">' + esc(r.from ? r.from.name : 'Choose start') + '</div></div>' +
+            '<button class="x" data-act="remove" aria-label="Remove route">×</button></li>' +
+            '<li class="row tap" data-act="to"><span class="dot hollow" style="border-color:' + col + '"></span>' +
+            '<div class="txt"><div class="meta">To</div><div class="name' + (r.to ? '' : ' muted') + '">' + esc(r.to ? r.to.name : 'Choose destination') + '</div></div></li>' +
+            (r.from && r.to ? '<li class="row modes">' + ['walk', 'car', 'bike'].map(m => modeChip(r, m)).join('') + '</li>' : '') +
+            '</ul>';
+    }).join('') +
+        '<button class="add-route" id="addRoute">+ Add route</button>' +
+        '<p class="foot">Tap 🚶 🚗 🛵 to show that route on the map. Motorbike times use a small daily allowance, so they load on tap.</p>';
+}
+
+$('compareView').addEventListener('click', e => {
+    if (e.target.closest('#addRoute')) { addRoute(); return; }
+    const a = e.target.closest('[data-act]'), grp = e.target.closest('[data-id]');
+    if (!a || !grp) return;
+    const r = cmp.find(x => x.id === grp.dataset.id);
+    if (!r) return;
+    const act = a.dataset.act;
+    if (act === 'remove') { cmp = cmp.filter(x => x !== r); keepCompare(); renderCompare(); drawCompare(false); }
+    else if (act === 'from' || act === 'to') openSearch({ id: r.id, end: act });
+    else if (act === 'mode') chooseMode(r, a.dataset.m);
+});
+
+function drawCompare(fit) {
+    cmpDrawn.forEach(o => o.setMap(null));
+    cmpDrawn = [];
+    if (!map || !comparing) return;
+    const pts = [];
+    cmp.forEach((r, i) => {
+        const col = ROUTE_COLORS[i % ROUTE_COLORS.length], res = r.res[r.sel];
+        if (res && res.line) {
+            const path = geo.encoding.decodePath(res.line);
+            cmpDrawn.push(new google.maps.Polyline({ path, map, clickable: false, strokeColor: '#FFFFFF', strokeWeight: 8, zIndex: 5 }));
+            cmpDrawn.push(new google.maps.Polyline({ path, map, clickable: false, strokeColor: col, strokeWeight: 4.5, zIndex: 6 }));
+        }
+        [r.from, r.to].forEach((ep, k) => {
+            const p = epPoint(ep);
+            if (!p) return;
+            const el = document.createElement('div');
+            el.className = 'cmp-dot' + (k ? ' end' : '');
+            el.style.setProperty('--c', col);
+            cmpDrawn.push(new Pin(p, el));
+            pts.push(p);
+        });
+    });
+    if (fit && pts.length) fitTo(pts);
+}
+
 // ---------- Back button ----------
 // Back closes whatever is on top (alert, search, card, menu, raised sheet) instead of leaving the app.
 // Chrome ignores history entries added before the first tap, so nothing is added until then.
 let pushed = false, skipPop = false, touched = false;
 addEventListener('pointerup', () => { touched = true; syncHistory(); }, { capture: true });
-const layersOpen = () => searchOpen() || cardOpen() || citiesOpen() || (!wide() && state !== 'peek');
+const layersOpen = () => searchOpen() || cardOpen() || citiesOpen() || comparing || (!wide() && state !== 'peek');
 function syncHistory() {
     if (!touched) return;
     try {
@@ -779,6 +1080,7 @@ addEventListener('popstate', () => {
     else if (searchOpen()) closeSearch();
     else if (cardOpen()) hideCard();
     else if (citiesOpen()) openCities(false);
+    else if (comparing) exitCompare();
     else if (!wide() && state !== 'peek') springTo('peek');
     syncHistory();
 });

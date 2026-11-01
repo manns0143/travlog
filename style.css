@@ -1068,3 +1068,154 @@ body:not(.ready) #searchBar {
     top: 68px;
   }
 }
+
+/* My location */
+#fabs button.on svg {
+  fill: currentColor;
+}
+.me {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  margin: -9px 0 0 -9px;
+  border-radius: 9px;
+  background: var(--blue);
+  border: 3px solid #fff;
+  box-shadow: 0 1px 5px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  z-index: 5;
+}
+.me::after {
+  content: "";
+  position: absolute;
+  inset: -12px;
+  border-radius: 50%;
+  background: rgba(0, 122, 255, 0.22);
+  animation: pulse 2.2s ease-out infinite;
+  z-index: -1;
+}
+@keyframes pulse {
+  from {
+    transform: scale(0.4);
+    opacity: 1;
+  }
+  to {
+    transform: scale(1.5);
+    opacity: 0;
+  }
+}
+
+/* Compare */
+body.comparing .pin,
+body.comparing .plane,
+body.comparing .upins {
+  opacity: 0.4;
+}
+.cmp-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+.cmp-actions {
+  display: flex;
+  gap: 18px;
+  padding-top: 4px;
+}
+.cmp-actions b {
+  font-weight: 600;
+}
+.list.cmp {
+  margin-bottom: 12px;
+}
+.dot {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  border-radius: 7px;
+  margin: 0 6px;
+}
+.dot.hollow {
+  background: #fff;
+  border: 3.5px solid;
+}
+.muted {
+  color: var(--secondary);
+}
+.row.modes {
+  gap: 8px;
+  padding: 10px 12px;
+}
+.row.modes::before {
+  left: 16px;
+}
+.mode {
+  flex: 1;
+  min-width: 0;
+  height: 58px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--fill);
+  color: var(--label);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 15px;
+  font-weight: 600;
+  transition: background-color 0.2s, color 0.2s;
+}
+.mode svg {
+  width: 17px;
+  height: 17px;
+  fill: currentColor;
+  opacity: 0.75;
+}
+.mode span {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 17px;
+}
+.mode small {
+  font-size: 11px;
+  line-height: 13px;
+  font-weight: 500;
+  color: var(--secondary);
+}
+.mode.on {
+  background: var(--blue);
+  color: #fff;
+}
+.mode.on small {
+  color: rgba(255, 255, 255, 0.8);
+}
+.add-route {
+  display: block;
+  width: calc(100% - 32px);
+  margin: 0 16px;
+  height: 50px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--card);
+  color: var(--blue);
+  font-size: 17px;
+  font-weight: 500;
+}
+.cmp-dot {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 8px;
+  background: var(--c);
+  border: 3px solid #fff;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  z-index: 4;
+}
+.cmp-dot.end {
+  background: #fff;
+  border: 4px solid var(--c);
+}
