@@ -1,20 +1,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-app.js';
 import { getAuth, signInAnonymously, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-auth.js';
-import { getDatabase, ref, get, set, onValue, serverTimestamp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js';
-
-// ===== Paste your Firebase settings below (Project settings → General → Your apps → Config) =====
-const firebaseConfig = {
-  apiKey: "AIzaSyD0H7UHwtKSrwduZMX1O3mgbpr_OQf18HA",
-  authDomain: "travlog-33ddf.firebaseapp.com",
-  databaseURL: "https://travlog-33ddf-default-rtdb.asia-southeast1.firebasedatabase.app",
-  projectId: "travlog-33ddf",
-  storageBucket: "travlog-33ddf.firebasestorage.app",
-  messagingSenderId: "694631578892",
-  appId: "1:694631578892:web:63173c87ebc04852861d29"
-};
-// ===== Paste your Realtime Database link below (no / at the end) =====
-const DB_URL = 'https://travlog-33ddf-default-rtdb.asia-southeast1.firebasedatabase.app';
-// ==================================================================================================
+import { getDatabase, ref, get, set, push, update, remove, onValue, serverTimestamp } from 'https://www.gstatic.com/firebasejs/13.1.0/firebase-database.js';
+import { firebaseConfig, DB_URL } from './config.js';
 
 const API = 'https://travlog-api.mannmshah143.workers.dev';
 
@@ -24,11 +11,21 @@ const db = getDatabase(fb, DB_URL);
 
 const $ = id => document.getElementById(id);
 const sheet = $('sheet'), head = $('head'), scroller = $('scroll'), chipsEl = $('chips');
-const dim = $('dim'), fabs = $('fabs');
+const dim = $('dim'), fabs = $('fabs'), searchBar = $('searchBar'), card = $('card');
 
 const ICON = {
     plane: '<svg viewBox="0 0 24 24"><path d="M21 16v-2l-8-5V3.5a1.5 1.5 0 0 0-3 0V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5z"/></svg>',
     bed: '<svg viewBox="0 0 24 24"><path d="M3 7v12h2v-3h14v3h2v-7a3 3 0 0 0-3-3h-7v5H5V7zm4.5 5a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/></svg>',
+    food: '<svg viewBox="0 0 24 24"><path d="M7 2h1.5v6h1V2H11v6h1V2h1.5v7a2.5 2.5 0 0 1-2 2.45V22h-2V11.45A2.5 2.5 0 0 1 7 9zm10 0c1.66 0 3 2.24 3 5v6h-2v9h-2V2z"/></svg>',
+    shop: '<svg viewBox="0 0 24 24"><path d="M7 7V6.5a5 5 0 0 1 10 0V7h3l-1 15H5L4 7zm2 0h6v-.5a3 3 0 0 0-6 0z"/></svg>',
+    sight: '<svg viewBox="0 0 24 24"><path d="m12 2.5 2.9 6.1 6.6.8-4.9 4.6 1.3 6.5L12 17.3l-5.9 3.2 1.3-6.5-4.9-4.6 6.6-.8z"/></svg>',
+    pin: '<svg viewBox="0 0 24 24"><path d="M12 2a7 7 0 0 0-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 0 0-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"/></svg>',
+};
+const CATS = {
+    food: { label: 'Food', color: '#FF9500', icon: ICON.food },
+    shop: { label: 'Shop', color: '#30B0C7', icon: ICON.shop },
+    sight: { label: 'Sight', color: '#FF3B30', icon: ICON.sight },
+    hotel: { label: 'Hotel', color: '#AF52DE', icon: ICON.bed },
 };
 const LEG_LABEL = { boat: 'By boat', cable: 'Cable car', flight: 'Flight' };
 
@@ -48,15 +45,34 @@ function hash(str) { // short, database-safe key for a list of points
     for (let i = 0; i < str.length; i++) h = ((h << 5) + h + str.charCodeAt(i)) >>> 0;
     return 'r' + h.toString(36) + str.length.toString(36);
 }
+const navUrl = p => 'https://www.google.com/maps/dir/?api=1&destination=' + p.lat + ',' + p.lng +
+    (p.placeId ? '&destination_place_id=' + encodeURIComponent(p.placeId) : '');
 
 let toastTimer = 0;
-function toast(msg) {
-    const t = $('toast');
-    t.textContent = msg;
+function toast(msg, action, onAction) {
+    const t = $('toast'), btn = $('toastBtn');
+    $('toastMsg').textContent = msg;
+    btn.textContent = action || '';
+    btn.onclick = () => { t.classList.remove('show'); onAction && onAction(); };
     t.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => t.classList.remove('show'), 3200);
+    toastTimer = setTimeout(() => t.classList.remove('show'), action ? 5000 : 3200);
 }
+
+let alertDone = null;
+function confirmBox(title, msg, ok) {
+    $('alertTitle').textContent = title;
+    $('alertMsg').textContent = msg;
+    $('alertOk').textContent = ok;
+    $('alert').classList.add('open');
+    return new Promise(resolve => { alertDone = resolve; });
+}
+function closeAlert(result) {
+    $('alert').classList.remove('open');
+    if (alertDone) { alertDone(result); alertDone = null; }
+}
+$('alertOk').addEventListener('click', () => closeAlert(true));
+$('alertCancel').addEventListener('click', () => closeAlert(false));
 
 async function api(path, body = {}) {
     const token = await auth.currentUser.getIdToken();
@@ -70,8 +86,18 @@ async function api(path, body = {}) {
     return data;
 }
 
+// The on-screen keyboard covers the bottom of the page; keep cards above it.
+const vv = window.visualViewport;
+function onViewport() {
+    const kb = vv ? Math.max(0, innerHeight - vv.height - vv.offsetTop) : 0;
+    document.documentElement.style.setProperty('--kb', kb + 'px');
+    document.documentElement.style.setProperty('--vvh', (vv ? vv.height : innerHeight) + 'px');
+}
+if (vv) { vv.addEventListener('resize', onViewport); vv.addEventListener('scroll', onViewport); }
+onViewport();
+
 // ---------- Sign-in and joining ----------
-let started = false;
+let started = false, myName = localStorage.getItem('travlog.name') || '';
 onAuthStateChanged(auth, async user => {
     if (!user) {
         signInAnonymously(auth).catch(() => showWelcome('Couldn’t connect. Check your internet and reload.'));
@@ -80,7 +106,8 @@ onAuthStateChanged(auth, async user => {
     if (started) return;
     let member = null;
     try { member = (await get(ref(db, 'members/' + user.uid))).val(); } catch (e) { }
-    if (member) start(); else showWelcome();
+    if (member) { myName = member.name; localStorage.setItem('travlog.name', myName); start(); }
+    else showWelcome();
 });
 
 function showWelcome(err) {
@@ -98,6 +125,7 @@ $('join').addEventListener('submit', async e => {
     errEl.textContent = '';
     try {
         await set(ref(db, 'members/' + auth.currentUser.uid), { name, passcode, joined: serverTimestamp() });
+        myName = name;
         localStorage.setItem('travlog.name', name);
         $('welcome').hidden = true;
         start();
@@ -111,7 +139,7 @@ $('join').addEventListener('submit', async e => {
 });
 
 // ---------- App ----------
-let trip = null, dayIndex = 0, routes = {}, chosenDay = false;
+let trip = null, dayIndex = 0, routes = {}, pins = {}, chosenDay = false;
 
 function start() {
     started = true;
@@ -127,6 +155,11 @@ function start() {
         drawDay(true);
     });
     onValue(ref(db, 'routes'), snap => { routes = snap.val() || {}; drawDay(false); });
+    onValue(ref(db, 'pins'), snap => {
+        pins = snap.val() || {};
+        if (selectedPin && !pins[selectedPin]) hideCard();
+        if (layer) layer.draw();
+    });
     loadMap();
 }
 
@@ -171,6 +204,15 @@ function badgeFor(s, n) {
     return '<span class="badge">' + n + '</span>';
 }
 
+function stopMeta(s) {
+    const meta = [];
+    if (s.kind === 'flight' && s.flight) meta.push(s.flight.from + ' → ' + s.flight.to + ' · lands ' + s.flight.arr);
+    if (LEG_LABEL[s.leg] && s.leg !== 'flight') meta.push(LEG_LABEL[s.leg]);
+    if (s.note) meta.push(s.note);
+    return meta.join(' · ');
+}
+const stopTime = s => s.time ? (s.approx ? '~' : '') + s.time : '';
+
 function renderDay() {
     const day = trip.days[dayIndex];
     $('dayTitle').textContent = 'Day ' + (dayIndex + 1);
@@ -178,15 +220,11 @@ function renderDay() {
     let n = 0;
     $('stops').innerHTML = day.stops.length ? day.stops.map(s => {
         if (s.kind === 'stop') n++;
-        const meta = [];
-        if (s.kind === 'flight' && s.flight) meta.push(s.flight.from + ' → ' + s.flight.to + ' · lands ' + s.flight.arr);
-        if (LEG_LABEL[s.leg] && s.leg !== 'flight') meta.push(LEG_LABEL[s.leg]);
-        if (s.note) meta.push(s.note);
-        const time = s.time ? (s.approx ? '~' : '') + s.time : '';
+        const meta = stopMeta(s);
         return '<li class="row' + (located(s) ? ' tap' : '') + '" data-id="' + esc(s.id) + '">' + badgeFor(s, n) +
             '<div class="txt"><div class="name">' + esc(s.name) + '</div>' +
-            (meta.length ? '<div class="meta">' + esc(meta.join(' · ')) + '</div>' : '') + '</div>' +
-            '<div class="time">' + esc(time) + '</div></li>';
+            (meta ? '<div class="meta">' + esc(meta) + '</div>' : '') + '</div>' +
+            '<div class="time">' + esc(stopTime(s)) + '</div></li>';
     }).join('') : '<li class="empty">No stops for this day yet.</li>';
     $('stops').querySelectorAll('.row.tap').forEach(r => r.addEventListener('click', () => focusStop(r.dataset.id, 'list')));
     scroller.scrollTop = 0;
@@ -222,7 +260,7 @@ const AREAS = {
     vietnam: [[8.3, 102.1], [23.4, 109.6]],
 };
 
-let map = null, geo = null, Pin = null, drawn = [], pinEls = {};
+let map = null, geo = null, Pin = null, layer = null, drawn = [], pinEls = {};
 const pending = new Set(), failed = new Set(); // road lines being fetched, or that Google couldn't route this session
 
 async function loadMap() {
@@ -253,24 +291,84 @@ async function loadMap() {
             }
             onRemove() { this.el.remove(); }
         };
+        definePinLayer();
+        layer = new PinLayer();
         drawDay(true);
     } catch (e) {
         toast('Couldn’t load the map. Check your connection.');
     }
 }
 
+// Everyone's pins in one layer, merged into numbered bubbles when they crowd together.
+let PinLayer = null;
+function definePinLayer() { // needs Google's OverlayView, so it runs once the map script has loaded
+    PinLayer = class extends google.maps.OverlayView {
+        constructor() { super(); this.box = document.createElement('div'); this.box.className = 'upins'; this.setMap(map); }
+        onAdd() { this.getPanes().overlayMouseTarget.appendChild(this.box); }
+        onRemove() { this.box.remove(); }
+        draw() {
+            const proj = this.getProjection();
+            if (!proj) return;
+            const groups = [];
+            for (const [id, p] of Object.entries(pins)) {
+                const px = proj.fromLatLngToDivPixel(new google.maps.LatLng(p.lat, p.lng));
+                if (!px) continue;
+                const g = groups.find(g => Math.abs(g.x - px.x) < 40 && Math.abs(g.y - px.y) < 40);
+                if (g) g.items.push({ id, p }); else groups.push({ x: px.x, y: px.y, items: [{ id, p }] });
+            }
+            this.box.replaceChildren(...groups.map(g => g.items.length === 1 ? pinButton(g) : clusterButton(g)));
+        }
+    };
+}
+
+function pinButton(g) {
+    const { id, p } = g.items[0], c = CATS[p.cat] || CATS.sight;
+    const el = document.createElement('button');
+    el.className = 'upin' + (id === selectedPin ? ' lit' : '');
+    el.style.cssText = 'left:' + g.x + 'px;top:' + g.y + 'px;background:' + c.color;
+    el.innerHTML = c.icon;
+    el.setAttribute('aria-label', p.name);
+    google.maps.OverlayView.preventMapHitsAndGesturesFrom(el);
+    el.addEventListener('click', () => openPin(id));
+    return el;
+}
+
+function clusterButton(g) {
+    const el = document.createElement('button');
+    el.className = 'cluster';
+    const c = CATS[g.items[0].p.cat] || CATS.sight;
+    el.style.cssText = 'left:' + g.x + 'px;top:' + g.y + 'px;--c:' + c.color;
+    el.textContent = g.items.length;
+    google.maps.OverlayView.preventMapHitsAndGesturesFrom(el);
+    el.addEventListener('click', () => {
+        const pts = g.items.map(i => ll(i.p));
+        const same = pts.every(p => Math.abs(p.lat - pts[0].lat) < 1e-5 && Math.abs(p.lng - pts[0].lng) < 1e-5);
+        if (same) { map.setCenter(pts[0]); map.setZoom(Math.min(21, map.getZoom() + 3)); }
+        else fitTo(pts);
+    });
+    return el;
+}
+
 function padding() {
-    const wide = matchMedia('(min-width: 768px)').matches;
-    if (wide) return { top: 40, right: 80, bottom: 40, left: 420 };
-    return { top: (snaps.full || 0) + 60, right: 64, bottom: Math.max(120, H - snaps.half) + 24, left: 40 };
+    if (wide()) return { top: 70, right: 80, bottom: 40, left: 420 };
+    return { top: (snaps.full || 0) + 70, right: 64, bottom: Math.max(120, H - snaps.half) + 24, left: 40 };
 }
 
 function fitTo(points) {
     if (!map || !points.length) return;
     const b = new google.maps.LatLngBounds();
     points.forEach(p => b.extend(p));
-    if (points.length === 1) { map.setCenter(points[0]); map.setZoom(15); return; }
+    if (points.length === 1) { frame(points[0]); return; }
     map.fitBounds(b, padding());
+}
+
+// Centres a point in the part of the map that isn't covered by the sheet or a card.
+function frame(pt, minZoom = 15) {
+    if (!map) return;
+    map.panTo(pt);
+    if (map.getZoom() < minZoom) map.setZoom(minZoom);
+    if (wide()) map.panBy(-200, 0);
+    else map.panBy(0, Math.round((cardOpen() ? card.offsetHeight + 16 : H - snaps.half) / 2));
 }
 
 // Splits the day into lines: road runs (drawn from Google's route), boat, cable car and flight legs.
@@ -398,26 +496,233 @@ function focusStop(id, from) {
     const row = $('stops').querySelector('[data-id="' + CSS.escape(id) + '"]');
     if (row) row.classList.add('lit');
     if (pinEls[id]) pinEls[id].classList.add('lit');
-    if (from === 'map') {
-        if (!wide() && state === 'peek') springTo('half');
-        if (row) row.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-    }
-    if (map) {
-        map.panTo(ll(s));
-        if (map.getZoom() < 14) map.setZoom(15);
-        if (!wide()) {
-            if (state === 'full') springTo('half');
-            map.panBy(0, Math.round((H - snaps.half) / 2));
-        } else {
-            map.panBy(-200, 0);
-        }
+    if (from === 'map') { showStopCard(s); return; }
+    if (!wide() && state === 'full') springTo('half');
+    frame(ll(s), 14);
+}
+
+// ---------- Cards (pin details and pin forms) ----------
+let selectedPin = null, cardClose = null, tempPin = null;
+const cardOpen = () => card.classList.contains('open');
+
+function showCard(html, actions = {}, onClose = null) {
+    card.innerHTML = html;
+    card.onclick = e => {
+        const a = e.target.closest('[data-act]');
+        if (!a) return;
+        if (a.dataset.act === 'close') hideCard();
+        else if (actions[a.dataset.act]) actions[a.dataset.act]();
+    };
+    if (cardClose && cardClose !== onClose) { const f = cardClose; cardClose = null; f(); }
+    cardClose = onClose;
+    card.classList.add('open');
+    if (!wide() && state !== 'peek') springTo('peek');
+    syncHistory();
+}
+
+function hideCard() {
+    card.classList.remove('open');
+    document.activeElement && document.activeElement.blur && document.activeElement.blur();
+    if (selectedPin) { selectedPin = null; if (layer) layer.draw(); }
+    if (cardClose) { const f = cardClose; cardClose = null; f(); }
+    syncHistory();
+}
+
+function showStopCard(s) {
+    if (selectedPin) { selectedPin = null; if (layer) layer.draw(); }
+    const meta = [stopTime(s), stopMeta(s)].filter(Boolean).join(' · ');
+    showCard(
+        '<div class="card-head"><div class="txt"><div class="card-title">' + esc(s.name) + '</div>' +
+        (meta ? '<div class="meta">' + esc(meta) + '</div>' : '') + '</div>' +
+        '<button class="x" data-act="close" aria-label="Close">×</button></div>' +
+        '<div class="card-actions"><a class="btn fill" href="' + navUrl(s) + '" target="_blank" rel="noopener">Navigate</a></div>');
+    frame(ll(s), 14);
+}
+
+function openPin(id) {
+    const p = pins[id];
+    if (!p) return;
+    const c = CATS[p.cat] || CATS.sight, mine = auth.currentUser && p.by === auth.currentUser.uid;
+    showCard(
+        '<div class="card-head"><span class="cat-dot" style="background:' + c.color + '">' + c.icon + '</span>' +
+        '<div class="txt"><div class="card-title">' + esc(p.name) + '</div>' +
+        '<div class="meta">' + c.label + ' · Added by ' + esc(mine ? 'you' : p.byName) + '</div></div>' +
+        '<button class="x" data-act="close" aria-label="Close">×</button></div>' +
+        (p.note ? '<p class="card-note">' + esc(p.note) + '</p>' : '') +
+        '<div class="card-actions"><a class="btn fill" href="' + navUrl(p) + '" target="_blank" rel="noopener">Navigate</a>' +
+        (mine ? '<button class="btn" data-act="edit">Edit</button><button class="btn danger" data-act="delete">Delete</button>' : '') +
+        '</div>',
+        { edit: () => editPin(id), delete: () => deletePin(id) });
+    selectedPin = id;
+    if (layer) layer.draw();
+    frame(ll(p), 15);
+}
+
+function pinForm({ title, name, cat, note, submit, onSave, onClose }) {
+    showCard(
+        '<div class="card-head"><div class="txt"><div class="card-title">' + esc(title) + '</div></div>' +
+        '<button class="x" data-act="close" aria-label="Close">×</button></div>' +
+        '<div class="fields"><input id="pfName" maxlength="80" placeholder="Name" value="' + esc(name) + '">' +
+        '<textarea id="pfNote" maxlength="500" rows="2" placeholder="Note (optional)">' + esc(note || '') + '</textarea></div>' +
+        '<div class="seg" id="pfCat">' + Object.entries(CATS).map(([k, c]) =>
+            '<button type="button" data-cat="' + k + '" class="' + (k === cat ? 'on' : '') + '">' + c.label + '</button>').join('') + '</div>' +
+        '<button class="primary" data-act="save">' + esc(submit) + '</button>',
+        {
+            save: async () => {
+                const v = {
+                    name: $('pfName').value.trim().slice(0, 80),
+                    note: $('pfNote').value.trim().slice(0, 500),
+                    cat: card.querySelector('#pfCat .on').dataset.cat,
+                };
+                if (!v.name) { $('pfName').focus(); return; }
+                const btn = card.querySelector('[data-act="save"]');
+                btn.disabled = true;
+                try { await onSave(v); }
+                catch (e) { btn.disabled = false; toast('Couldn’t save. Check your connection.'); }
+            },
+        }, onClose);
+    card.querySelectorAll('#pfCat button').forEach(b => b.addEventListener('click', () => {
+        card.querySelectorAll('#pfCat button').forEach(x => x.classList.toggle('on', x === b));
+    }));
+}
+
+function editPin(id) {
+    const p = pins[id];
+    if (!p) return;
+    pinForm({
+        title: 'Edit pin', name: p.name, cat: p.cat, note: p.note, submit: 'Save',
+        onSave: async v => {
+            await update(ref(db, 'pins/' + id), { name: v.name, cat: v.cat, note: v.note || null });
+            openPin(id);
+        },
+    });
+}
+
+async function deletePin(id) {
+    const p = pins[id];
+    if (!p) return;
+    if (!(await confirmBox('Delete “' + p.name + '”?', 'It disappears from everyone’s map.', 'Delete'))) return;
+    hideCard();
+    try {
+        await remove(ref(db, 'pins/' + id));
+        toast('Pin deleted', 'Undo', () => set(ref(db, 'pins/' + id), { ...p, at: serverTimestamp() }));
+    } catch (e) {
+        toast('Couldn’t delete. Check your connection.');
     }
 }
 
-// City jump menu
+function showTemp(pos) {
+    hideTemp();
+    const el = document.createElement('div');
+    el.className = 'pin new';
+    el.innerHTML = ICON.pin;
+    tempPin = { pos, el, overlay: new Pin(pos, el) };
+}
+function hideTemp() {
+    if (tempPin) { tempPin.overlay.setMap(null); tempPin = null; }
+}
+
+// ---------- Search ----------
+let session = null, searchSeq = 0, searchTimer = 0, found = [];
+const searchOpen = () => $('search').classList.contains('open');
+
+searchBar.addEventListener('click', () => {
+    if (cardOpen()) hideCard();
+    $('search').classList.add('open');
+    $('q').value = '';
+    $('results').innerHTML = '';
+    $('q').focus();
+    session = crypto.randomUUID();
+    syncHistory();
+});
+$('qCancel').addEventListener('click', () => closeSearch());
+function closeSearch() {
+    $('search').classList.remove('open');
+    $('q').blur();
+    clearTimeout(searchTimer);
+    syncHistory();
+}
+
+$('q').addEventListener('input', () => {
+    clearTimeout(searchTimer);
+    const q = $('q').value.trim();
+    if (q.length < 2) { $('results').innerHTML = ''; return; }
+    showResults(q, null);
+    searchTimer = setTimeout(() => runSearch(q), 300);
+});
+$('q').addEventListener('keydown', e => { if (e.key === 'Enter') { clearTimeout(searchTimer); runSearch($('q').value.trim()); } });
+
+async function runSearch(q) {
+    if (q.length < 2) return;
+    const seq = ++searchSeq;
+    const c = map && map.getCenter();
+    try {
+        const r = await api('/autocomplete', { input: q, session, near: c ? { lat: c.lat(), lng: c.lng() } : undefined });
+        if (seq === searchSeq) showResults(q, r.places);
+    } catch (e) {
+        if (seq === searchSeq) showResults(q, [], e.message === 'limit' ? 'Search is paused for today.' : 'Couldn’t search. Check your connection.');
+    }
+}
+
+function showResults(q, places, err) {
+    const ql = q.toLowerCase();
+    const saved = Object.entries(pins).filter(([, p]) => p.name.toLowerCase().includes(ql)).slice(0, 5);
+    const row = (i, icon, color, name, sub) =>
+        '<li class="row tap" data-i="' + i + '"><span class="badge" style="background:' + color + '">' + icon + '</span>' +
+        '<div class="txt"><div class="name">' + esc(name) + '</div>' + (sub ? '<div class="meta">' + esc(sub) + '</div>' : '') + '</div></li>';
+    found = saved.map(([id, p]) => ({ saved: id, p })).concat((places || []).map(p => ({ place: p })));
+    let html = '';
+    if (saved.length) html += '<p class="section">On the map</p><ul class="list">' + saved.map(([id, p], i) => {
+        const c = CATS[p.cat] || CATS.sight;
+        return row(i, c.icon, c.color, p.name, c.label + ' · ' + p.byName);
+    }).join('') + '</ul>';
+    if (places && places.length) html += '<p class="section">Places</p><ul class="list">' +
+        places.map((p, i) => row(saved.length + i, ICON.pin, '#8E8E93', p.name, p.address)).join('') + '</ul>';
+    if (err) html += '<p class="foot">' + esc(err) + '</p>';
+    else if (places && !places.length && !saved.length) html += '<p class="foot">No places found.</p>';
+    $('results').innerHTML = html;
+    $('results').querySelectorAll('[data-i]').forEach(r => r.addEventListener('click', () => pick(found[+r.dataset.i])));
+}
+
+async function pick(item) {
+    closeSearch();
+    if (item.saved) { openPin(item.saved); return; }
+    const place = item.place;
+    const already = Object.entries(pins).find(([, p]) => p.placeId === place.id);
+    if (already) { openPin(already[0]); toast('Already pinned by ' + (already[1].by === auth.currentUser.uid ? 'you' : already[1].byName)); return; }
+    let d;
+    try { d = await api('/place', { id: place.id, session }); }
+    catch (e) { toast(e.message === 'limit' ? 'Search is paused for today.' : 'Couldn’t open that place.'); return; }
+    session = crypto.randomUUID();
+    if (!map || typeof d.lat !== 'number') return;
+    const pos = { lat: d.lat, lng: d.lng };
+    showTemp(pos);
+    pinForm({
+        title: 'New pin', name: place.name, cat: 'food', note: '', submit: 'Add Pin',
+        onSave: async v => {
+            const r = push(ref(db, 'pins'));
+            const pin = {
+                name: v.name, cat: v.cat, lat: pos.lat, lng: pos.lng, placeId: place.id, address: d.address || place.address || '',
+                by: auth.currentUser.uid, byName: myName || 'Someone', at: serverTimestamp()
+            };
+            if (v.note) pin.note = v.note;
+            await set(r, pin);
+            cardClose = null;
+            hideTemp();
+            hideCard();
+            toast('Pin added');
+        },
+        onClose: hideTemp,
+    });
+    frame(pos, 16);
+}
+
+// ---------- City jump menu ----------
+const citiesOpen = () => $('cities').classList.contains('open');
 function openCities(open) {
     $('cities').classList.toggle('open', open);
     $('actionDim').classList.toggle('open', open);
+    syncHistory();
 }
 $('citiesBtn').addEventListener('click', () => openCities(true));
 $('citiesCancel').addEventListener('click', () => openCities(false));
@@ -428,10 +733,34 @@ document.querySelectorAll('[data-city]').forEach(b => b.addEventListener('click'
     fitTo([{ lat: s, lng: w }, { lat: n, lng: e }]);
 }));
 
+// ---------- Back button ----------
+// Back closes whatever is on top (alert, search, card, menu, raised sheet) instead of leaving the app.
+// Chrome ignores history entries added before the first tap, so nothing is added until then.
+let pushed = false, skipPop = false, touched = false;
+addEventListener('pointerup', () => { touched = true; syncHistory(); }, { capture: true });
+const layersOpen = () => searchOpen() || cardOpen() || citiesOpen() || (!wide() && state !== 'peek');
+function syncHistory() {
+    if (!touched) return;
+    try {
+        if (layersOpen() && !pushed) { history.pushState({ travlog: 1 }, ''); pushed = true; }
+        else if (!layersOpen() && pushed) { pushed = false; skipPop = true; history.back(); }
+    } catch (e) { }
+}
+addEventListener('popstate', () => {
+    if (skipPop) { skipPop = false; return; }
+    pushed = false;
+    if ($('alert').classList.contains('open')) closeAlert(false);
+    else if (searchOpen()) closeSearch();
+    else if (cardOpen()) hideCard();
+    else if (citiesOpen()) openCities(false);
+    else if (!wide() && state !== 'peek') springTo('peek');
+    syncHistory();
+});
+
 // ---------- Bottom sheet (phone) ----------
 let H = 0, snaps = {}, state = 'half', y = 0, anim = 0;
 const ORDER = ['full', 'half', 'peek'];
-const wide = () => matchMedia('(min-width: 768px)').matches;
+function wide() { return matchMedia('(min-width: 768px)').matches; }
 
 function measure() {
     const probe = getComputedStyle($('probe'));
@@ -450,20 +779,24 @@ function rubber(v) {
 
 function setY(v) {
     y = v;
-    if (wide()) { sheet.style.transform = ''; fabs.style.opacity = 1; fabs.style.pointerEvents = 'auto'; return; }
+    if (wide()) {
+        sheet.style.transform = '';
+        [fabs, searchBar].forEach(el => { el.style.opacity = 1; el.style.pointerEvents = 'auto'; });
+        return;
+    }
     sheet.style.transform = 'translate3d(0,' + v + 'px,0)';
     const p = Math.min(1, Math.max(0, (snaps.half - v) / (snaps.half - snaps.full)));
     dim.style.opacity = (p * 0.12).toFixed(3);
     dim.style.pointerEvents = p > 0.5 ? 'auto' : 'none';
     const fabBottom = fabs.offsetTop + fabs.offsetHeight + 12;
     const f = Math.min(1, Math.max(0, (v - fabBottom) / 40));
-    fabs.style.opacity = f;
-    fabs.style.pointerEvents = f > 0.5 ? 'auto' : 'none';
+    [fabs, searchBar].forEach(el => { el.style.opacity = f; el.style.pointerEvents = f > 0.5 ? 'auto' : 'none'; });
 }
 
 function springTo(name, v0 = 0) {
     cancelAnimationFrame(anim);
-    setState(name);
+    state = name;
+    syncHistory();
     if (wide()) { settled(); return; }
     const target = snaps[name], k = 320, c = 2 * 0.86 * Math.sqrt(k);
     let x = y, v = v0, last = performance.now();
@@ -483,24 +816,6 @@ function settled() {
     if (!wide() && state !== 'full') scroller.scrollTop = 0;
 }
 
-// Android Back lowers the sheet instead of leaving the app.
-// Chrome ignores history entries added before the first touch, so wait for one.
-let pushed = false, skipPop = false, touched = false;
-function setState(name) {
-    state = name;
-    if (!touched || wide()) return;
-    try {
-        if (name !== 'peek' && !pushed) { history.pushState({ sheet: 1 }, ''); pushed = true; }
-        else if (name === 'peek' && pushed) { pushed = false; skipPop = true; history.back(); }
-    } catch (e) { }
-}
-addEventListener('popstate', () => {
-    if (skipPop) { skipPop = false; return; }
-    pushed = false;
-    if ($('cities').classList.contains('open')) { openCities(false); return; }
-    if (state !== 'peek') springTo('peek');
-});
-
 function release(v) {
     const projected = y + v * 200;
     let target = ORDER.reduce((a, b) => Math.abs(snaps[b] - projected) < Math.abs(snaps[a] - projected) ? b : a);
@@ -511,7 +826,6 @@ function release(v) {
 
 let g = null, lastTouch = 0;
 function down(x, fy, t, target) {
-    touched = true;
     if (wide()) return;
     const wasMoving = !!anim;
     cancelAnimationFrame(anim); anim = 0;

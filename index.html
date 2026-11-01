@@ -24,6 +24,14 @@
     <div id="probe"></div>
     <div id="map"></div>
 
+    <button id="searchBar" class="glass" aria-label="Search">
+      <svg viewBox="0 0 24 24">
+        <circle cx="10.5" cy="10.5" r="6.5" />
+        <path d="m15.5 15.5 5 5" />
+      </svg>
+      <span>Search Vietnam</span>
+    </button>
+
     <div id="fabs" class="glass">
       <button id="citiesBtn" aria-label="Jump to a city">
         <svg viewBox="0 0 24 24">
@@ -51,6 +59,30 @@
       </div>
     </div>
 
+    <div id="card" class="card"></div>
+
+    <div id="search" class="search">
+      <div class="search-top">
+        <label class="search-field">
+          <svg viewBox="0 0 24 24">
+            <circle cx="10.5" cy="10.5" r="6.5" />
+            <path d="m15.5 15.5 5 5" />
+          </svg>
+          <input
+            id="q"
+            type="search"
+            placeholder="Search Vietnam"
+            autocomplete="off"
+            autocorrect="off"
+            spellcheck="false"
+            enterkeyhint="search"
+          />
+        </label>
+        <button id="qCancel" class="link">Cancel</button>
+      </div>
+      <div class="search-results" id="results"></div>
+    </div>
+
     <div id="actionDim" class="action-dim"></div>
     <div id="cities" class="action">
       <div class="action-group">
@@ -63,7 +95,20 @@
       <button class="action-cancel" id="citiesCancel">Cancel</button>
     </div>
 
-    <div id="toast" class="glass"></div>
+    <div id="alert" class="alert">
+      <div class="alert-box">
+        <p class="alert-title" id="alertTitle"></p>
+        <p class="alert-msg" id="alertMsg"></p>
+        <div class="alert-btns">
+          <button id="alertCancel">Cancel</button
+          ><button id="alertOk" class="destructive">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="toast" class="glass">
+      <span id="toastMsg"></span><button id="toastBtn"></button>
+    </div>
 
     <div id="welcome" hidden>
       <form id="join" autocomplete="off" novalidate>
