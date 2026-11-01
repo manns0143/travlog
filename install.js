@@ -6,7 +6,7 @@ const bar = $('install'), guide = $('installGuide');
 const standalone = () => matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 const ios = /iPhone|iPad|iPod/.test(navigator.userAgent);
 const android = /Android/.test(navigator.userAgent);
-let prompt = null;
+let prompt = null, offered = false;
 
 const STEPS = ios ? [
     'Tap the <b>Share</b> button next to Chrome’s address bar.',
@@ -26,6 +26,8 @@ function offer() {
     if (standalone() || localStorage.getItem('travlog.noInstall')) return;
     if (!document.body.classList.contains('ready')) return;
     if (!prompt && !ios && !android) return;
+    if (offered && !prompt) return;
+    offered = true;
     $('installBtn').textContent = prompt ? 'Install' : 'How';
     bar.classList.add('show');
 }
