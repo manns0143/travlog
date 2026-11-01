@@ -24,6 +24,8 @@
     <link rel="stylesheet" href="style.css" />
     <script type="module" src="app.js"></script>
     <script type="module" src="install.js"></script>
+    <script type="module" src="edit.js"></script>
+    <script type="module" src="notes.js"></script>
   </head>
   <body>
     <div id="probe"></div>
@@ -62,9 +64,12 @@
     <div id="sheet">
       <div class="head" id="head">
         <div class="grabber"></div>
-        <div class="title" id="dayHead">
-          <h1 id="dayTitle">Travlog</h1>
-          <p id="daySub">Loading…</p>
+        <div class="title day-head" id="dayHead">
+          <div>
+            <h1 id="dayTitle">Travlog</h1>
+            <p id="daySub">Loading…</p>
+          </div>
+          <button id="editDay" class="link">Edit</button>
         </div>
         <div class="title cmp-head" id="cmpHead" hidden>
           <div>
@@ -82,6 +87,7 @@
         <div id="dayView">
           <ul class="list" id="stops"></ul>
           <p class="foot">Tap a stop to see it on the map.</p>
+          <div id="notesEntry"></div>
         </div>
         <div id="compareView" hidden></div>
       </div>
@@ -109,6 +115,24 @@
         <button id="qCancel" class="link">Cancel</button>
       </div>
       <div class="search-results" id="results"></div>
+    </div>
+
+    <div id="editPanel" class="panel">
+      <div class="panel-top">
+        <span></span>
+        <h2 id="editTitle">Edit day</h2>
+        <button id="editDone" class="link"><b>Done</b></button>
+      </div>
+      <div class="panel-body" id="editBody"></div>
+    </div>
+
+    <div id="notePanel" class="panel">
+      <div class="panel-top">
+        <span></span>
+        <h2>Note</h2>
+        <button id="noteDone" class="link"><b>Done</b></button>
+      </div>
+      <div class="panel-body" id="noteBody"></div>
     </div>
 
     <div id="actionDim" class="action-dim"></div>
