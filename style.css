@@ -1429,3 +1429,22 @@ body.comparing .upins {
   font-size: 17px;
   min-height: 30px;
 }
+
+/* Keyboard open on a phone: keep the field you're typing in on screen */
+@media (max-width: 767px) {
+  body.typing #sheet,
+  body.typing #fabs,
+  body.typing #searchBar,
+  body.typing #install {
+    visibility: hidden;
+  }
+  body.typing .card {
+    top: calc(var(--vvtop, 0px) + env(safe-area-inset-top, 0px) + 8px);
+    bottom: auto;
+  }
+  .panel,
+  .search {
+    top: var(--vvtop, 0px);
+    bottom: auto;
+  }
+}
