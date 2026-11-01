@@ -104,9 +104,13 @@ onAuthStateChanged(auth, async user => {
         return;
     }
     if (started) return;
-    let member = null;
-    try { member = (await get(ref(db, 'members/' + user.uid))).val(); } catch (e) { }
+    let member = null, noSignal = false;
+    try {
+        const timeout = new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000));
+        member = (await Promise.race([get(ref(db, 'members/' + user.uid)), timeout])).val();
+    } catch (e) { noSignal = true; }
     if (member) { myName = member.name; localStorage.setItem('travlog.name', myName); start(); }
+    else if (noSignal && myName) start(); // offline, but this phone has joined before: open the saved copy
     else showWelcome();
 });
 
@@ -141,25 +145,38 @@ $('join').addEventListener('submit', async e => {
 // ---------- App ----------
 let trip = null, dayIndex = 0, routes = {}, pins = {}, chosenDay = false;
 
+// The last copy of the trip, pins and route lines is kept on the phone for when there's no signal.
+const saved = k => { try { return JSON.parse(localStorage.getItem('travlog.' + k)); } catch (e) { return null; } };
+const keep = (k, v) => { try { localStorage.setItem('travlog.' + k, JSON.stringify(v)); } catch (e) { } };
+
+function showTrip(val) {
+    trip = normalise(val);
+    if (!trip) { $('dayTitle').textContent = 'Travlog'; $('daySub').textContent = 'No itinerary yet'; return; }
+    if (!chosenDay) dayIndex = defaultDay();
+    dayIndex = Math.min(dayIndex, trip.days.length - 1);
+    renderChips();
+    renderDay();
+    drawDay(true);
+}
+
 function start() {
     started = true;
     document.body.classList.add('ready');
     initSheet();
-    onValue(ref(db, 'trip'), snap => {
-        trip = normalise(snap.val());
-        if (!trip) { $('dayTitle').textContent = 'Travlog'; $('daySub').textContent = 'No itinerary yet'; return; }
-        if (!chosenDay) dayIndex = defaultDay();
-        dayIndex = Math.min(dayIndex, trip.days.length - 1);
-        renderChips();
-        renderDay();
-        drawDay(true);
-    });
-    onValue(ref(db, 'routes'), snap => { routes = snap.val() || {}; drawDay(false); });
+    routes = saved('routes') || {};
+    pins = saved('pins') || {};
+    const lastTrip = saved('trip');
+    if (lastTrip) showTrip(lastTrip);
+    if (!navigator.onLine) toast('You’re offline. Showing the saved itinerary.');
+    onValue(ref(db, 'trip'), snap => { keep('trip', snap.val()); showTrip(snap.val()); });
+    onValue(ref(db, 'routes'), snap => { routes = snap.val() || {}; keep('routes', routes); drawDay(false); });
     onValue(ref(db, 'pins'), snap => {
         pins = snap.val() || {};
+        keep('pins', pins);
         if (selectedPin && !pins[selectedPin]) hideCard();
         if (layer) layer.draw();
     });
+    addEventListener('online', () => { if (!map) loadMap(); });
     loadMap();
 }
 
@@ -263,10 +280,19 @@ const AREAS = {
 let map = null, geo = null, Pin = null, layer = null, drawn = [], pinEls = {};
 const pending = new Set(), failed = new Set(); // road lines being fetched, or that Google couldn't route this session
 
+let mapLoading = false;
 async function loadMap() {
+    if (map || mapLoading) return;
+    mapLoading = true;
+    try { await loadMapNow(); } finally { mapLoading = false; }
+}
+async function loadMapNow() {
     let key;
     try { key = (await api('/map-key')).key; }
-    catch (e) { toast(e.message === 'limit' ? 'The map is paused for today. The itinerary still works.' : 'Couldn’t load the map. Check your connection.'); return; }
+    catch (e) {
+        if (navigator.onLine) toast(e.message === 'limit' ? 'The map is paused for today. The itinerary still works.' : 'Couldn’t load the map. Check your connection.');
+        return;
+    }
     try {
         await new Promise((resolve, reject) => {
             window.__travlogMap = resolve;

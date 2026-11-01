@@ -10,7 +10,11 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-title" content="Travlog" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>Travlog</title>
+    <link rel="manifest" href="manifest.json" />
+    <link rel="icon" href="icon-192.png" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -19,6 +23,7 @@
     />
     <link rel="stylesheet" href="style.css" />
     <script type="module" src="app.js"></script>
+    <script type="module" src="install.js"></script>
   </head>
   <body>
     <div id="probe"></div>
@@ -108,6 +113,24 @@
 
     <div id="toast" class="glass">
       <span id="toastMsg"></span><button id="toastBtn"></button>
+    </div>
+
+    <div id="install" class="install glass">
+      <img src="icon-192.png" alt="" />
+      <div class="txt">
+        <div class="install-title">Install Travlog</div>
+        <div class="meta">Opens full-screen, like an app</div>
+      </div>
+      <button id="installBtn" class="install-btn">Install</button>
+      <button id="installX" class="x" aria-label="Not now">×</button>
+    </div>
+
+    <div id="installGuide" class="card">
+      <div class="card-head">
+        <div class="txt"><div class="card-title">Add to Home Screen</div></div>
+      </div>
+      <ol class="steps" id="guideSteps"></ol>
+      <button class="primary" id="guideDone">Done</button>
     </div>
 
     <div id="welcome" hidden>
