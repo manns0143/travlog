@@ -52,6 +52,11 @@ function hash(str) { // short, database-safe key for a list of points
 const navUrl = p => 'https://www.google.com/maps/dir/?api=1&destination=' + p.lat + ',' + p.lng +
     (p.placeId ? '&destination_place_id=' + encodeURIComponent(p.placeId) : '');
 
+// Photos, reviews and hours: info.js loads them only when tapped, because they use a small free allowance
+const placeLink = (p, path) => '<button class="more" data-info="' + esc(p.placeId || '') + '" data-name="' + esc(p.name || '') +
+  '" data-lat="' + (p.lat ?? '') + '" data-lng="' + (p.lng ?? '') + '"' + (path ? ' data-path="' + esc(path) + '"' : '') +
+  '>Photos, reviews and hours ›</button><div class="info"></div>';
+
 let toastTimer = 0;
 function toast(msg, action, onAction) {
     const t = $('toast'), btn = $('toastBtn');
@@ -575,8 +580,8 @@ function showStopCard(s) {
     showCard(
         '<div class="card-head"><div class="txt"><div class="card-title">' + esc(s.name) + '</div>' +
         (meta ? '<div class="meta">' + esc(meta) + '</div>' : '') + '</div>' +
-        '<button class="x" data-act="close" aria-label="Close">×</button></div>' +
-        '<div class="card-actions"><a class="btn fill" href="' + navUrl(s) + '" target="_blank" rel="noopener">Navigate</a></div>');
+    '<button class="x" data-act="close" aria-label="Close">×</button></div>' + placeLink(s, 'trip/days/' + dayIndex + '/stops/' + s.id) +
+    '<div class="card-actions"><a class="btn fill" href="' + navUrl(s) + '" target="_blank" rel="noopener">Navigate</a></div>');
     frame(ll(s), 14);
 }
 
@@ -589,7 +594,7 @@ function openPin(id) {
         '<div class="txt"><div class="card-title">' + esc(p.name) + '</div>' +
         '<div class="meta">' + c.label + ' · Added by ' + esc(mine ? 'you' : p.byName) + '</div></div>' +
         '<button class="x" data-act="close" aria-label="Close">×</button></div>' +
-        (p.note ? '<p class="card-note">' + esc(p.note) + '</p>' : '') +
+        (p.note ? '<p class="card-note">' + esc(p.note) + '</p>' : '') + placeLink(p) +
         '<div class="card-actions"><a class="btn fill" href="' + navUrl(p) + '" target="_blank" rel="noopener">Navigate</a>' +
         (mine ? '<button class="btn" data-act="edit">Edit</button><button class="btn danger" data-act="delete">Delete</button>' : '') +
         '</div>',
@@ -599,10 +604,10 @@ function openPin(id) {
     frame(ll(p), 15);
 }
 
-function pinForm({ title, name, cat, note, submit, onSave, onClose }) {
-    showCard(
-        '<div class="card-head"><div class="txt"><div class="card-title">' + esc(title) + '</div></div>' +
-        '<button class="x" data-act="close" aria-label="Close">×</button></div>' +
+function pinForm({ title, name, cat, note, submit, onSave, onClose, link }) {
+  showCard(
+    '<div class="card-head"><div class="txt"><div class="card-title">' + esc(title) + '</div></div>' +
+    '<button class="x" data-act="close" aria-label="Close">×</button></div>' + (link || '') +
         '<div class="fields"><input id="pfName" maxlength="80" placeholder="Name" value="' + esc(name) + '">' +
         '<textarea id="pfNote" maxlength="500" rows="2" placeholder="Note (optional)">' + esc(note || '') + '</textarea></div>' +
         '<div class="seg" id="pfCat">' + Object.entries(CATS).map(([k, c]) =>
@@ -762,6 +767,7 @@ async function pick(item) {
     showTemp(pos);
     pinForm({
         title: 'New pin', name: place.name, cat: 'food', note: '', submit: 'Add Pin',
+        link: placeLink({ name: place.name, placeId: place.id }),
         onSave: async v => {
             const r = push(ref(db, 'pins'));
             const pin = {

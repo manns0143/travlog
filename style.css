@@ -11,7 +11,8 @@
   --purple: #af52de;
   --orange: #ff9500;
   --teal: #30b0c7;
-  --font: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui,
+  --font:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "Inter", system-ui,
     sans-serif;
   --spring: cubic-bezier(0.32, 0.72, 0, 1);
 }
@@ -72,7 +73,9 @@ body:not(.ready) #searchBar {
   background: rgba(255, 255, 255, 0.74);
   -webkit-backdrop-filter: saturate(180%) blur(20px);
   backdrop-filter: saturate(180%) blur(20px);
-  box-shadow: 0 0 0 0.5px var(--sep), 0 6px 20px rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 0 0 0.5px var(--sep),
+    0 6px 20px rgba(0, 0, 0, 0.08);
 }
 
 /* Floating buttons */
@@ -159,7 +162,9 @@ body:not(.ready) #searchBar {
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
   border-radius: 14px 14px 0 0;
-  box-shadow: 0 0 0 0.5px var(--sep), 0 -6px 28px rgba(0, 0, 0, 0.1);
+  box-shadow:
+    0 0 0 0.5px var(--sep),
+    0 -6px 28px rgba(0, 0, 0, 0.1);
   will-change: transform;
 }
 #sheet::after {
@@ -223,7 +228,9 @@ body:not(.ready) #searchBar {
   font-weight: 500;
   letter-spacing: -0.2px;
   white-space: nowrap;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
 }
 .chip b {
   font-weight: 600;
@@ -466,7 +473,9 @@ body:not(.ready) #searchBar {
   background: rgba(255, 255, 255, 0.94);
   -webkit-backdrop-filter: saturate(180%) blur(24px);
   backdrop-filter: saturate(180%) blur(24px);
-  box-shadow: 0 0 0 0.5px var(--sep), 0 10px 40px rgba(0, 0, 0, 0.16);
+  box-shadow:
+    0 0 0 0.5px var(--sep),
+    0 10px 40px rgba(0, 0, 0, 0.16);
   transform: translateY(calc(100% + 60px));
   transition: transform 0.45s var(--spring);
   -webkit-user-select: text;
@@ -587,12 +596,16 @@ body:not(.ready) #searchBar {
   background: none;
   font-size: 13px;
   font-weight: 500;
-  transition: background-color 0.2s, box-shadow 0.2s;
+  transition:
+    background-color 0.2s,
+    box-shadow 0.2s;
 }
 .seg button.on {
   background: #fff;
   font-weight: 600;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.12),
+    0 3px 1px rgba(0, 0, 0, 0.04);
 }
 
 /* Search */
@@ -611,7 +624,9 @@ body:not(.ready) #searchBar {
   opacity: 0;
   pointer-events: none;
   transform: translateY(10px);
-  transition: opacity 0.25s, transform 0.45s var(--spring);
+  transition:
+    opacity 0.25s,
+    transform 0.45s var(--spring);
 }
 .search.open {
   opacity: 1;
@@ -961,7 +976,9 @@ body:not(.ready) #searchBar {
     height: auto !important;
     transform: none !important;
     border-radius: 16px;
-    box-shadow: 0 0 0 0.5px var(--sep), 0 10px 40px rgba(0, 0, 0, 0.12);
+    box-shadow:
+      0 0 0 0.5px var(--sep),
+      0 10px 40px rgba(0, 0, 0, 0.12);
   }
   #sheet::after,
   .grabber,
@@ -994,7 +1011,9 @@ body:not(.ready) #searchBar {
     height: auto;
     max-height: 70vh;
     border-radius: 14px;
-    box-shadow: 0 0 0 0.5px var(--sep), 0 10px 40px rgba(0, 0, 0, 0.14);
+    box-shadow:
+      0 0 0 0.5px var(--sep),
+      0 10px 40px rgba(0, 0, 0, 0.14);
   }
   .search-top {
     padding-top: 10px;
@@ -1164,7 +1183,9 @@ body.comparing .upins {
   gap: 2px;
   font-size: 15px;
   font-weight: 600;
-  transition: background-color 0.2s, color 0.2s;
+  transition:
+    background-color 0.2s,
+    color 0.2s;
 }
 .mode svg {
   width: 17px;
@@ -1334,7 +1355,9 @@ body.comparing .upins {
   height: 27px;
   border-radius: 14px;
   background: #fff;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.15), 0 1px 1px rgba(0, 0, 0, 0.16);
+  box-shadow:
+    0 3px 8px rgba(0, 0, 0, 0.15),
+    0 1px 1px rgba(0, 0, 0, 0.16);
   transition: transform 0.3s var(--spring);
 }
 .switch.on {
@@ -1378,7 +1401,9 @@ body.comparing .upins {
   background: none;
   display: grid;
   place-items: center;
-  transition: background-color 0.2s, box-shadow 0.2s;
+  transition:
+    background-color 0.2s,
+    box-shadow 0.2s;
 }
 .check svg {
   width: 14px;
@@ -1447,4 +1472,205 @@ body.comparing .upins {
     top: var(--vvtop, 0px);
     bottom: auto;
   }
+}
+
+/* Photos, reviews and hours */
+.more {
+  display: block;
+  margin-top: 10px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 15px;
+  line-height: 20px;
+  color: var(--blue);
+  text-align: left;
+  cursor: pointer;
+}
+.more:disabled {
+  color: var(--secondary);
+}
+.card {
+  max-height: calc(var(--vvh, 100vh) - env(safe-area-inset-top, 0px) - 24px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.info {
+  margin-top: 12px;
+}
+.info:empty {
+  display: none;
+}
+.ph-strip {
+  display: flex;
+  gap: 6px;
+  margin: 0 -16px;
+  padding: 0 16px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+  touch-action: pan-x;
+}
+.ph-strip::-webkit-scrollbar {
+  display: none;
+}
+.ph {
+  position: relative;
+  flex: none;
+  width: 150px;
+  height: 112px;
+  border: 0;
+  padding: 0;
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--fill) center / cover no-repeat;
+  scroll-snap-align: start;
+}
+.ph:not(.loaded):not(.err) {
+  animation: shimmer 1.2s ease-in-out infinite alternate;
+}
+@keyframes shimmer {
+  from {
+    opacity: 0.5;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.ph.err::after {
+  content: "↻";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--secondary);
+  font-size: 20px;
+}
+.ph-by {
+  position: absolute;
+  left: 6px;
+  bottom: 5px;
+  max-width: calc(100% - 12px);
+  font-size: 10px;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.rate {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  font-size: 15px;
+}
+.stars {
+  position: relative;
+  display: inline-block;
+  color: rgba(60, 60, 67, 0.18);
+  font-size: 13px;
+  letter-spacing: 1px;
+}
+.stars span {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  color: #ff9500;
+}
+.open {
+  color: #34c759;
+  font-weight: 600;
+}
+.closed {
+  color: var(--red);
+  font-weight: 600;
+}
+.hours {
+  margin-top: 8px;
+  font-size: 15px;
+}
+.hours summary {
+  cursor: pointer;
+  list-style: none;
+}
+.hours summary::-webkit-details-marker {
+  display: none;
+}
+.hours summary::after {
+  content: " ›";
+  color: var(--secondary);
+}
+.hours p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--secondary);
+}
+.hours p.today {
+  color: var(--label);
+  font-weight: 600;
+}
+.reviews {
+  margin-top: 12px;
+}
+.rev {
+  padding: 10px 0;
+  box-shadow: inset 0 0.5px 0 var(--sep);
+}
+.rev-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.rev-text {
+  margin: 4px 0 0;
+  font-size: 15px;
+  line-height: 20px;
+  cursor: pointer;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.rev-text.full {
+  display: block;
+  -webkit-line-clamp: unset;
+}
+.attr {
+  margin: 10px 0 0;
+  font-size: 12px;
+  color: var(--secondary);
+}
+.attr a {
+  color: var(--blue);
+  text-decoration: none;
+}
+.ph-view {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.92);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s;
+}
+.ph-view.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+.ph-view img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+.ph-view .ph-by {
+  left: 16px;
+  bottom: calc(env(safe-area-inset-bottom, 0px) + 16px);
+  font-size: 13px;
 }
