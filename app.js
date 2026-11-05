@@ -736,9 +736,10 @@ function showResults(q, places, err) {
         section('Day ' + (dayIndex + 1), stops.map(s => row({ stop: s }, s.kind === 'hotel' ? ICON.bed : ICON.pin,
             s.kind === 'hotel' ? '#AF52DE' : BLUE, s.name, stopTime(s))));
     }
-    if (ql) {
-        const saved = Object.entries(pins).filter(([, p]) => p.name.toLowerCase().includes(ql)).slice(0, 5);
-        section('On the map', saved.map(([id, p]) => {
+if (ql || !searchMode) { // with nothing typed, list every pin, newest first
+    const saved = Object.entries(pins).filter(([, p]) => p.name.toLowerCase().includes(ql))
+      .sort((a, b) => (b[1].at || 0) - (a[1].at || 0)).slice(0, ql ? 5 : 500);
+    section(ql ? 'On the map' : 'All pins · ' + saved.length, saved.map(([id, p]) => {
             const c = CATS[p.cat] || CATS.sight;
             return row({ saved: id }, c.icon, c.color, p.name, c.label + ' · ' + p.byName);
         }));
